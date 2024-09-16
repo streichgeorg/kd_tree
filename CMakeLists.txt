@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 project(rrt)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FetchContent)
 enable_testing()
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
+
+add_executable(rrt ${CMAKE_SOURCE_DIR}/src/rrt.cpp)
 
 add_executable(test_kd_tree ${CMAKE_SOURCE_DIR}/test/test_kd_tree.cpp)
 

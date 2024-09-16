@@ -3,18 +3,17 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <queue>
 #include <tuple>
 #include <vector>
 
-#include <iostream>
-
 class HeapQueue {
 public:
-    const static uint32_t max_size = std::numeric_limits<uint32_t>::max();
+    const static int max_size = std::numeric_limits<int>::max();
 
 private:
-    std::priority_queue<std::pair<float, uint32_t>> queue;
+    std::priority_queue<std::pair<float, int>> queue;
 
 public:
     HeapQueue(int size) {
@@ -23,7 +22,7 @@ public:
         }
     }
 
-    float pop_push(float dist, uint32_t id) {
+    float pop_push(float dist, int id) {
         queue.pop();
         queue.push({dist, id});
         return queue.top().first;
@@ -33,10 +32,10 @@ public:
         return queue.top().first;
     }
 
-    std::vector<std::pair<float, uint32_t>> elems() {
-        std::priority_queue<std::pair<float, uint32_t>> copy = queue;
+    std::vector<std::pair<float, int>> elems() {
+        std::priority_queue<std::pair<float, int>> copy = queue;
 
-        std::vector<std::pair<float, uint32_t>> result;
+        std::vector<std::pair<float, int>> result;
         while (!copy.empty()) {
             auto el = copy.top();
             copy.pop();
@@ -48,22 +47,22 @@ public:
 
 class ArrQueue {
 public:
-    const static uint32_t max_size = 16;
+    const static int max_size = 16;
 
 private:
-    uint32_t size;
+    int size;
 
     float top_value = std::numeric_limits<float>::infinity();
     int top_idx = 0;
 
-    std::array<std::pair<float, uint32_t>, max_size> values;
-
 public:
-    ArrQueue(uint32_t _size) : size(_size) {
+    std::array<std::pair<float, int>, max_size> values;
+
+    ArrQueue(int _size) : size(_size) {
         values.fill({std::numeric_limits<float>::infinity(), 0});
     }
 
-    float pop_push(float dist, uint32_t id) {
+    float pop_push(float dist, int id) {
         values[top_idx] = {dist, id};
         top_value = dist;
 
@@ -81,8 +80,8 @@ public:
         return top_value;
     }
 
-    std::vector<std::pair<float, uint32_t>> elems() {
-        std::vector<std::pair<float, uint32_t>> result;
+    std::vector<std::pair<float, int>> elems() {
+        std::vector<std::pair<float, int>> result;
         for (auto el : values) {
             if (el.first < std::numeric_limits<float>::infinity()) result.push_back(el);
         }
@@ -95,7 +94,7 @@ using Point = std::array<float, DIMS>;
 
 template <
     uint8_t DIMS,
-    uint32_t BUCKET_SIZE = 128,
+    int BUCKET_SIZE = 64,
     uint8_t SUBTREE_SIZE = 3,
     uint8_t SUBTREE_BYTES = 32
 >
@@ -105,10 +104,10 @@ public:
 private:
     struct Bucket {
         float point_data[DIMS][BUCKET_SIZE];
-        uint32_t point_ids[BUCKET_SIZE];
-        uint32_t num_points;
+        int point_ids[BUCKET_SIZE];
+        int num_points;
 
-        Bucket(uint32_t _num_points) : num_points(_num_points) {
+        Bucket(int _num_points) : num_points(_num_points) {
             for (int i = 0; i < DIMS; i++) {
                 for (int j = 0; j < BUCKET_SIZE; j++) {
                     point_data[i][j] = std::numeric_limits<float>::infinity();
@@ -120,20 +119,20 @@ private:
     std::vector<Bucket> buckets;
 
     struct NodeRef {
-        uint32_t node_idx;
-        uint32_t inner_idx;
+        int node_idx;
+        int inner_idx;
     };
 
     const static uint8_t direction_bits = 8 * (SUBTREE_BYTES - 8 * SUBTREE_SIZE - 1) / SUBTREE_SIZE;
 
-    struct Node {
+    struct alignas(SUBTREE_BYTES) Node {
         enum Type : uint8_t {
             LEAF,
             INNER
         } __attribute__((packed));
 
         union {
-            uint32_t bucket_idx;
+            int bucket_idx;
             struct {
                 float split[SUBTREE_SIZE];
                 uint32_t child_nodes[SUBTREE_SIZE];
@@ -162,12 +161,12 @@ private:
     std::vector<Node> nodes;   
 
     NodeRef get_child(NodeRef ref, bool right) const {
-        uint32_t child_inner = 2 * ref.inner_idx + 1 + right;
+        int child_inner = 2 * ref.inner_idx + 1 + right;
         if (child_inner < SUBTREE_SIZE) {
             return NodeRef {ref.node_idx, child_inner};
         }
 
-        uint32_t child_node;
+        int child_node;
 
         // Special case for left most child, the node was allocated right next to this one
         if (child_inner == SUBTREE_SIZE) {
@@ -180,12 +179,12 @@ private:
     } 
 
     NodeRef create_at(NodeRef ref, bool right) {
-        uint32_t child_inner = 2 * ref.inner_idx + 1 + right;
+        int child_inner = 2 * ref.inner_idx + 1 + right;
         if (child_inner < SUBTREE_SIZE) {
             return NodeRef {ref.node_idx, child_inner};
         }
 
-        uint32_t child_node = nodes.size();
+        int child_node = nodes.size();
         nodes.emplace_back();
 
         if (child_inner == SUBTREE_SIZE) {
@@ -199,11 +198,11 @@ private:
 
     void construct_subtree(
         NodeRef at,
-        typename std::vector<std::pair<Point, uint32_t>>::iterator lit,
-        typename std::vector<std::pair<Point, uint32_t>>::iterator rit,
+        typename std::vector<std::pair<Point, int>>::iterator lit,
+        typename std::vector<std::pair<Point, int>>::iterator rit,
         Point &bb_min, Point &bb_max
     ) {
-        uint32_t num_points = std::distance(lit, rit);
+        int num_points = std::distance(lit, rit);
 
         if (num_points <= BUCKET_SIZE) {
             // Add sentinel child nodes until we point to the root of a subtree
@@ -242,7 +241,7 @@ private:
         }
 
         float split = (bb_min[direction] + bb_max[direction]) / 2;
-        auto mit = std::partition(lit, rit, [&](const std::pair<Point, uint32_t> &p) {
+        auto mit = std::partition(lit, rit, [&](const std::pair<Point, int> &p) {
             return p.first[direction] < split;
         });
 
@@ -278,7 +277,7 @@ private:
         bb_min[direction] = old_bb_min;
     }
 
-    void construct_from(std::vector<std::pair<Point, uint32_t>> &points) {
+    void construct_from(std::vector<std::pair<Point, int>> &points) {
         nodes.emplace_back();
         NodeRef root {0, 0};
 
@@ -305,7 +304,7 @@ private:
 
         static_assert(BUCKET_SIZE % BLOCK_SIZE == 0, "BLOCK_SIZE must divide BUCKET_SIZE");
 
-        uint32_t num_points = bucket.num_points;
+        int num_points = bucket.num_points;
 
         // This might go slightly out of bounds, but we filled point data with
         // infty so it is still correct
@@ -357,31 +356,59 @@ private:
         }
     }
 
+    std::vector<std::pair<uint8_t, float>> wrapped_dims;
 public:
     Point bb_min;
     Point bb_max;
 
-    KDTree(std::vector<std::pair<Point, uint32_t>> &&points_with_ids) {
+    KDTree(std::vector<std::pair<Point, int>> &points_with_ids) {
         construct_from(points_with_ids);
     }
 
     KDTree(const std::vector<Point> &points) {
-        std::vector<std::pair<Point, uint32_t>> points_with_ids;
+        std::vector<std::pair<Point, int>> points_with_ids;
         for (int i = 0; i < points.size(); i++) points_with_ids.emplace_back(points[i], i);
         construct_from(points_with_ids);
     }
 
+    void make_wrapped(uint8_t dim, float dim_width) {
+        wrapped_dims.push_back({dim, dim_width});
+    }
+
     template<typename QUEUE = HeapQueue>
-    std::vector<std::pair<float, uint32_t>> knn(const Point &point, int k = 1) const {
-        if (QUEUE::max_size < k) {
-            return knn<HeapQueue>(point, k);
+    QUEUE knn(
+        const Point &point,
+        int k = 1,
+        std::optional<std::reference_wrapper<QUEUE>> maybe_queue = std::nullopt
+    ) const {
+        assert(k <= QUEUE::max_size);
+
+        QUEUE local_queue(k);
+        if (!maybe_queue) {
+            maybe_queue = local_queue;
         }
 
-        QUEUE queue(k);
+        QUEUE &queue = maybe_queue.value();
 
         NodeRef root {0, 0};
-        find_in_node(root, point, queue, 0, Point {0});
 
-        return queue.elems();
+        Point h;
+        h.fill(0);
+
+        int m = wrapped_dims.size();
+        for (int i = 0; i < (1 << m); i++) {
+            Point p = point;
+            for (int j = 0; j < m; j++) {
+                if (i & (1 << j)) {
+                    int dim_idx;
+                    float dim_width;
+                    std::tie(dim_idx, dim_width) = wrapped_dims[j];
+                    p[dim_idx] -= dim_width;
+                }
+            }
+            find_in_node(root, p, queue, 0, h);
+        }
+
+        return queue;
     }
 };

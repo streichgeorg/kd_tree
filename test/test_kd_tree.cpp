@@ -9,8 +9,8 @@
 template<uint8_t DIMS, typename QUEUE = HeapQueue>
 static void test_points(
     const std::vector<Point<DIMS>> &points,
-    uint32_t k,
-    uint32_t num_queries = 1000
+    int k,
+    int num_queries = 1000
 ) {
     KDTree<DIMS> tree(points);
 
@@ -30,8 +30,8 @@ static void test_points(
             }
         }
 
-        std::vector<std::pair<float, uint32_t>> correct = queue.elems();
-        std::vector<std::pair<float, uint32_t>> mine = tree.template knn<QUEUE>(query, k);
+        std::vector<std::pair<float, int>> correct = queue.elems();
+        std::vector<std::pair<float, int>> mine = tree.template knn<QUEUE>(query, k).elems();
 
         assert(correct.size() == mine.size());
 
@@ -47,7 +47,7 @@ static void test_points(
 }
 
 template<uint8_t DIMS, typename QUEUE = HeapQueue>
-static void test_uniform_points(uint32_t num_points, uint32_t k = 1, uint32_t num_queries = 1000) {
+static void test_uniform_points(int num_points, int k = 1, int num_queries = 1000) {
     Point<DIMS> zeros;
     zeros.fill(0.0);
     Point<DIMS> ones;
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     test_uniform_points<3>(100000);
     test_uniform_points<4>(100000, 5);
     test_uniform_points<3, ArrQueue>(100000, 5);
-    test_uniform_points<3, ArrQueue>(100000, 20);
+    test_uniform_points<3, HeapQueue>(100000, 20);
 
     test_eth_pointcloud(1, 1);
     test_eth_pointcloud(5, 36);

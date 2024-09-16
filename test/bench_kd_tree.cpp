@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     KDTree<3> eth_tree(eth_points);
 
     Eigen::MatrixXf M = to_eigen<3>(eth_points);
-    Nabo::NNSearchF *libnabo_eth_tree = Nabo::NNSearchF::createKDTreeLinearHeap(M);
+    Nabo::NNSearchF *eth_libnabo = Nabo::NNSearchF::createKDTreeLinearHeap(M);
 
     // benchmark::RegisterBenchmark(
     //     "eth_point_cloud_query",
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     benchmark::RegisterBenchmark(
         "eth_point_cloud_libnabo_query",
         BM_libnabo_query<3>,
-        libnabo_eth_tree,
+        eth_libnabo,
         eth_tree.bb_min,
         eth_tree.bb_max
     )->RangeMultiplier(2)->Range(1, 16);
@@ -81,6 +81,6 @@ int main(int argc, char** argv) {
     benchmark::RunSpecifiedBenchmarks();
     benchmark::Shutdown();
 
-    delete libnabo_eth_tree;
+    delete eth_libnabo;
 
 }
