@@ -94,7 +94,7 @@ using Point = std::array<float, DIMS>;
 
 template <
     uint8_t DIMS,
-    int BUCKET_SIZE = 64,
+    int BUCKET_SIZE = 128,
     uint8_t SUBTREE_SIZE = 3,
     uint8_t SUBTREE_BYTES = 32
 >
@@ -294,7 +294,7 @@ private:
         construct_subtree(root, points.begin(), points.end(), bb_min, bb_max);
     }
 
-    template<typename QUEUE, int BLOCK_SIZE = 16>
+    template<typename QUEUE, int BLOCK_SIZE = 8>
     void find_in_bucket(
         const Bucket &bucket,
         const Point &p,
@@ -318,8 +318,16 @@ private:
                 }
             }
 
+            bool cont = true;
             for (int k = 0; k < BLOCK_SIZE; k++) {
-                if (dist[k] <= req_dist) {
+                if (dist[k] < req_dist) {
+                    cont = false;
+                }
+            }
+            if (cont) continue;
+
+            for (int k = 0; k < BLOCK_SIZE; k++) {
+                if (dist[k] < req_dist) {
                     req_dist = queue.pop_push(dist[k], bucket.point_ids[i + k]);
                 }
             }
@@ -344,10 +352,11 @@ private:
         float split = node.data.inner.split[ref.inner_idx];
         uint8_t direction = get_direction(node, ref);
 
+        float d = p[direction] - split;
+
         bool right = p[direction] > split;
         find_in_node(get_child(ref, right), p, queue, s, h);
 
-        float d = p[direction] - split;
         s += d * d - h[direction];
         h[direction] = d * d;
 

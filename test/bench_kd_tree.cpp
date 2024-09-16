@@ -67,15 +67,15 @@ int main(int argc, char** argv) {
         "eth_point_cloud_query_arr_queue",
         BM_query<3, ArrQueue>,
         eth_tree
-    )->RangeMultiplier(2)->Range(1, 16);
+    )->RangeMultiplier(2)->Range(1, 1)->Iterations(1000000);
 
-    benchmark::RegisterBenchmark(
-        "eth_point_cloud_libnabo_query",
-        BM_libnabo_query<3>,
-        eth_libnabo,
-        eth_tree.bb_min,
-        eth_tree.bb_max
-    )->RangeMultiplier(2)->Range(1, 16);
+    // benchmark::RegisterBenchmark(
+    //     "eth_point_cloud_libnabo_query",
+    //     BM_libnabo_query<3>,
+    //     eth_libnabo,
+    //     eth_tree.bb_min,
+    //     eth_tree.bb_max
+    // )->RangeMultiplier(2)->Range(1, 1);
 
     benchmark::Initialize(&argc, argv);
     benchmark::RunSpecifiedBenchmarks();
